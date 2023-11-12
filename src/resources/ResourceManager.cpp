@@ -106,7 +106,7 @@ shared_ptr<Render::Sprite> ResourceManager::loadSprite(const string& spriteName,
 		cerr << "Cant find the shader by name: " << shaderName << "for the sprite: " << spriteName << endl;
 	}
 
-	shared_ptr<Render::Sprite> newSprite = m_sprites.emplace(textureName,
+	shared_ptr<Render::Sprite> newSprite = m_sprites.emplace(spriteName,
 		make_shared<Render::Sprite>(pTextute, pShader, glm::vec2(0.f, 0.f), glm::vec2(spriteW, spriteH))).first->second;
 
 	return newSprite;

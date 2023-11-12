@@ -32,7 +32,16 @@ GLfloat textureCoord[] = {
     0.0f, 0.0f,
 };
 
-glm::ivec2 g_windowSize(640, 480);
+#define WIDTH 640
+#define HEIGHT 480
+#define SPEED 40
+
+glm::ivec2 g_windowSize(WIDTH, HEIGHT);
+glm::vec2 g_blockPosition(10.f, HEIGHT / 2 - 50);
+glm::vec2 g_blockSize(30, 125);
+glm::vec2 g_ballPosition(WIDTH / 2, HEIGHT / 2);
+glm::vec2 g_ballSize(25, 25);
+glm::vec2 velocity(-5, -5);
 
 void glfwWindowSizeCallback(GLFWwindow* pWindow, int width, int height)
 {
@@ -46,6 +55,51 @@ void glfwKeyCallback(GLFWwindow* pWindow, int key, int scancode, int action, int
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) 
     {
         glfwSetWindowShouldClose(pWindow, GL_TRUE);
+    }
+    if (key == GLFW_KEY_W)
+    {
+        GLfloat value = g_blockPosition.y + SPEED + g_blockSize.y;
+        if(g_windowSize.y > value)
+            g_blockPosition += glm::vec2(0, SPEED);
+    }
+    if (key == GLFW_KEY_S)
+    {
+        GLfloat value = g_blockPosition.y - SPEED;
+        if (0 <= value)
+            g_blockPosition += glm::vec2(0, -SPEED);
+        else
+            g_blockPosition += glm::vec2(0, 0);
+    }
+}
+
+void MoveBall()
+{
+    g_ballPosition += velocity;
+    auto value = g_blockPosition.y + g_blockSize.y;
+    if (g_ballPosition.x <= 0.f)
+    {
+        velocity.x = -velocity.x;
+        g_ballPosition.x = g_windowSize.x - g_ballSize.x;
+    }
+    else if (g_ballPosition.x <= g_blockPosition.x + g_blockSize.x && (g_ballPosition.y >= g_blockPosition.y && g_ballPosition.y <= value))
+    {
+        velocity.x = -velocity.x;
+        g_ballPosition.x = g_blockPosition.x + g_blockSize.x;
+    }
+    else if (g_ballPosition.x + g_ballSize.x >= g_windowSize.x)
+    {
+        velocity.x = -velocity.x;
+        g_ballPosition.x = g_windowSize.x - g_ballSize.x;
+    }
+    else if (g_ballPosition.y <= 0.f)
+    {
+        velocity.y = -velocity.y;
+        g_ballPosition.y = 0;
+    }
+    else if (g_ballPosition.y + g_ballSize.y >= g_windowSize.y)
+    {
+        velocity.y = -velocity.y;
+        g_ballPosition.y = g_windowSize.y - g_ballSize.y;
     }
 }
 
@@ -84,95 +138,43 @@ int main(int argc, char** argv)
 
     {
         ResourceManager resourceManager(argv[0]);
-        shared_ptr<Render::ShaderProgram> pDefaultShaderProgram = resourceManager.loadShaders("DefaultShader", "resources/shaders/vertex.txt", "resources/shaders/fragment.txt");
-        if (!pDefaultShaderProgram)
-        {
-            cerr << "cant create shader program" << endl;
-            return -1;
-        }
 
         shared_ptr<Render::ShaderProgram> pSpriteShaderProgram = resourceManager.loadShaders("SpriteShader", "resources/shaders/vSprite.txt", "resources/shaders/fSprite.txt");
-        if (!pDefaultShaderProgram)
+        if (!pSpriteShaderProgram)
         {
             cerr << "cant create shader program" << endl;
             return -1;
         }
 
         auto tex = resourceManager.loadTexture("Default", "/resources/textures/error.png");
-        auto sprite = resourceManager.loadSprite("DefaulfSprite", "Default", "SpriteShader", 100, 200);
-        sprite->setPosition(glm::vec2(300.f, 200.f));
-        sprite->setRotation(45);
 
-
-        GLuint points_vbo = 0;
-        glGenBuffers(1, &points_vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(point), point, GL_STATIC_DRAW);
-
-        GLuint color_vbo = 0;
-        glGenBuffers(1, &color_vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, color_vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
-
-        GLuint textureCoord_vbo = 0;
-        glGenBuffers(1, &textureCoord_vbo);
-        glBindBuffer(GL_ARRAY_BUFFER, textureCoord_vbo);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(textureCoord), textureCoord, GL_STATIC_DRAW);
-
-        GLuint vao = 0;
-        glGenVertexArrays(1, &vao);
-        glBindVertexArray(vao);
-
-        glEnableVertexAttribArray(0);
-        glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-
-        glEnableVertexAttribArray(1);
-        glBindBuffer(GL_ARRAY_BUFFER, color_vbo);
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-
-        glEnableVertexAttribArray(2);
-        glBindBuffer(GL_ARRAY_BUFFER, textureCoord_vbo);
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-          
-        pDefaultShaderProgram->use();
-        pDefaultShaderProgram->setInt("tex", 0);
+        auto block_1 = resourceManager.loadSprite("Block_1", "Default", "SpriteShader", g_blockSize.x, g_blockSize.y);
+        block_1->setPosition(g_blockPosition);
+        auto ball = resourceManager.loadSprite("ball", "Default", "SpriteShader", 25, 25);
+        ball->setPosition(glm::vec2(g_windowSize.x / 2, g_windowSize.y / 2));
 
         glm::mat4 modelMatrix = glm::mat4(1.f);
         modelMatrix = glm::translate(modelMatrix, glm::vec3(50.f, 200.f, 0.f));
 
         glm::mat4 projectionMatrix = glm::ortho(0.f, static_cast<float>(g_windowSize.x), 0.f, static_cast<float>(g_windowSize.y), -100.f, 100.f);
-        pDefaultShaderProgram->setMat4("projectionMat", projectionMatrix);
 
         pSpriteShaderProgram->use();
         pSpriteShaderProgram->setMat4("projectionMat", projectionMatrix);
-        float value = 0;
-        /* Loop until the user closes the window */
+
         while (!glfwWindowShouldClose(pWindow))
         {
             /* Render here */
             glClear(GL_COLOR_BUFFER_BIT);
-            pDefaultShaderProgram->use();
-            glBindVertexArray(vao);
             tex->bind();
-                
-            /*      modelMatrix = glm::mat4(1.f);
-            modelMatrix = glm::translate(modelMatrix, glm::vec3(value, 200.f, 0.f));
-            value += 10.f;
-            if (g_windowSize.x < value - 50.f)
-                value = 0.f;*/
-            pDefaultShaderProgram->setMat4("modelMat", modelMatrix);
-            glDrawArrays(GL_TRIANGLES, 0, 3);
-
-            value += 1.f;
            
-            sprite->setRotation(value);
-            sprite->render();
+            ball->render();
+            MoveBall();
+            ball->setPosition(g_ballPosition);
+            block_1->render();
+            block_1->setPosition(g_blockPosition);
 
-
-            /* Swap front and back buffers */
             glfwSwapBuffers(pWindow);
-            /* Poll for and process events */
+
             glfwPollEvents();
 
             Sleep(8);

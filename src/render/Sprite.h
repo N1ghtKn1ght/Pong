@@ -26,6 +26,7 @@ namespace Render
 		void setPosition(const glm::vec2& position);
 		void setSize(const glm::vec2& size);
 		void setRotation(const float rotate);
+		glm::vec2 getPosition();
 
 	private:
 		shared_ptr<Texture2D> m_Texture;
