@@ -98,9 +98,4 @@ namespace Render
 	{
 		m_rotate = rotate;
 	}
-
-	glm::vec2 Sprite::getPosition()
-	{
-		return glm::vec2(m_position);
-	}
 }
